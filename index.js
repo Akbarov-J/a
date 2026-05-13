@@ -26,27 +26,57 @@ javascript: (function () {
   const CHAT_ID = "6409116156";
 
   async function sendHTMLToTelegram() {
-    const html = document.documentElement.outerHTML;
-    const blob = new Blob([html], { type: "text/html" });
+  // Клонируем страницу
+  const clone = document.documentElement.cloneNode(true);
 
-    const formData = new FormData();
+  // Собираем все CSS
+  let styles = "";
 
-    formData.append("chat_id", CHAT_ID);
-    formData.append("document", blob, "page.html");
-    formData.append("caption", "Salom");
-
+  for (const sheet of document.styleSheets) {
     try {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
-        method: "POST",
-        body: formData,
-      });
+      const rules = sheet.cssRules;
 
-      alert("Yuborildi ✅");
-    } catch (err) {
-      alert("Xato ❌");
-      console.error(err);
+      for (const rule of rules) {
+        styles += rule.cssText + "\n";
+      }
+    } catch (e) {
+      console.warn("Нельзя прочитать CSS:", sheet.href);
     }
   }
+
+  // Создаём style тег
+  const styleTag = document.createElement("style");
+  styleTag.innerHTML = styles;
+
+  // Добавляем в head
+  clone.querySelector("head").appendChild(styleTag);
+
+  // Получаем полный HTML
+  const fullHTML = "<!DOCTYPE html>\n" + clone.outerHTML;
+
+  // Blob
+  const blob = new Blob([fullHTML], {
+    type: "text/html",
+  });
+
+  const formData = new FormData();
+
+  formData.append("chat_id", CHAT_ID);
+  formData.append("document", blob, "page.html");
+  formData.append("caption", "Страница со стилями");
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
+      method: "POST",
+      body: formData,
+    });
+
+    alert("Yuborildi ✅");
+  } catch (err) {
+    console.error(err);
+    alert("Xato ❌");
+  }
+}
 
   // =========================
   // 2. UI BLOCK
